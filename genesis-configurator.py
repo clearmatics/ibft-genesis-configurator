@@ -8,6 +8,8 @@ path_genesis_template = '/autonity/genesis-template.json'
 path_validators = '/autonity/validators'
 path_observers = '/autonity/observers'
 
+balance = '0x200000000000000000000000000000000000000000000000000000000000000'
+
 
 def get_genesis_template():
     with open(path_genesis_template) as f:
@@ -33,12 +35,27 @@ def get_keys(path):
 
 
 def patch_genesis(genesis, validators, observers):
-    print('======Validators ======')
+    alloc = {}
+    for key, value in validators['addresses'].items():
+        alloc[value] = {'balance': balance}
+    genesis['alloc'] = alloc
 
-    # List allowed addresses
-    print(list(validators['addresses'].values()))
-    print('======Observers ======')
-    print(observers)
+    enodeWhitelist = []
+    for key, value in validators['pub_keys'].items():
+        enodeWhitelist.append('enode://{pub_key}@validator-{name}:{port}'.format(
+            pub_key=value,
+            name=key,
+            port=30303
+        ))
+    for key, value in observers['pub_keys'].items():
+        enodeWhitelist.append('enode://{pub_key}@observer-{name}:{port}'.format(
+            pub_key=value,
+            name=key,
+            port=30303
+        ))
+    genesis['config']['enodeWhitelist'] = enodeWhitelist
+    genesis['validators'] = list(validators['addresses'].values())
+
     return genesis
 
 
@@ -48,7 +65,7 @@ def main():
     observers = get_keys(path_observers)
     genesis = patch_genesis(genesis, validators, observers)
 
-    print(genesis)
+    print(json.dumps(genesis, indent=2))
 
 
 if __name__ == '__main__':
