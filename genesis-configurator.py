@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
 import json
+import argparse
+from kubernetes import client, config
 from os import listdir
 from os.path import isfile, join, isdir
 
@@ -55,17 +57,41 @@ def patch_genesis(genesis, validators, observers):
         ))
     genesis['config']['enodeWhitelist'] = enodeWhitelist
     genesis['validators'] = list(validators['addresses'].values())
-
     return genesis
 
 
+def write_genesis(genesis, namespace):
+    api_instance = client.CoreV1Api()
+    cmap = client.V1ConfigMap()
+    cmap.data = {'genesis.json': json.dumps(genesis, indent=2)}
+    api_instance.patch_namespaced_config_map('genesis', namespace, cmap)
+
+
 def main():
+    parser = argparse.ArgumentParser(description='Generate genesis.json and write it to configmap')
+    parser.add_argument('-k',
+                        dest='kubeconf_type',
+                        default='pod',
+                        choices=['pod', 'remote'],
+                        help='Type of connection to kube-apiserver: pod or remote (default: %(default)s)'
+                        )
+    args = parser.parse_args()
+
+    if args.kubeconf_type == 'pod':
+        config.load_incluster_config()
+        f = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace", "r")
+        namespace = f.readline()
+        f.close()
+
     genesis = get_genesis_template()
     validators = get_keys(path_validators)
     observers = get_keys(path_observers)
     genesis = patch_genesis(genesis, validators, observers)
 
     print(json.dumps(genesis, indent=2))
+
+    if args.kubeconf_type == 'pod':
+        write_genesis(genesis, namespace)
 
 
 if __name__ == '__main__':
