@@ -3,7 +3,7 @@
 import json
 import argparse
 from kubernetes import client, config
-from os import listdir
+from os import listdir, environ
 from os.path import isfile, join, isdir
 
 path_genesis_template = '/autonity/genesis-template.json'
@@ -37,24 +37,48 @@ def get_keys(path):
 
 
 def patch_genesis(genesis, validators, observers):
-    alloc = {}
+    alloc        = {}
+    validatorIps = environ.get('VALIDATOR_IPS')
+    observerIps  = environ.get('OBSERVER_IPS')
+
     for key, value in validators['addresses'].items():
         alloc[value] = {'balance': balance}
     genesis['alloc'] = alloc
 
     enodeWhitelist = []
-    for key, value in validators['pub_keys'].items():
-        enodeWhitelist.append('enode://{pub_key}@validator-{name}:{port}'.format(
-            pub_key=value,
-            name=key,
-            port=30303
-        ))
-    for key, value in observers['pub_keys'].items():
-        enodeWhitelist.append('enode://{pub_key}@observer-{name}:{port}'.format(
-            pub_key=value,
-            name=key,
-            port=30303
-        ))
+    
+    if validatorIps:
+        validatorIpsArr = validatorIps.split(" ")
+        for key, value in validators['pub_keys'].items():
+            enodeWhitelist.append('enode://{pub_key}@{name}:{port}'.format(
+                pub_key=value,
+                name=validatorIpsArr[int(key)],
+                port=30303
+            ))
+        
+    else:
+        for key, value in validators['pub_keys'].items():
+            enodeWhitelist.append('enode://{pub_key}@validator-{name}:{port}'.format(
+                pub_key=value,
+                name=key,
+                port=30303
+            ))
+
+    if observerIps:
+        observerIpsArr = observerIps.split(" ")
+        for key, value in observers['pub_keys'].items():
+            enodeWhitelist.append('enode://{pub_key}@{name}:{port}'.format(
+                pub_key=value,
+                name=observerIpsArr[int(key)],
+                port=30303
+            ))
+    else:
+        for key, value in observers['pub_keys'].items():
+            enodeWhitelist.append('enode://{pub_key}@observer-{name}:{port}'.format(
+                pub_key=value,
+                name=key,
+                port=30303
+            ))
     genesis['config']['enodeWhitelist'] = enodeWhitelist
     genesis['validators'] = list(validators['addresses'].values())
     return genesis
@@ -96,3 +120,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
