@@ -9,6 +9,9 @@ from os.path import isfile, join, isdir
 path_genesis_template = '/autonity/genesis-template.json'
 path_validators = '/autonity/validators'
 path_observers = '/autonity/observers'
+path_operator_governance = '/autonity/operator-governance'
+path_operator_treasury = '/autonity/operator-treasury'
+
 
 balance = '0x200000000000000000000000000000000000000000000000000000000000000'
 
@@ -99,6 +102,13 @@ def main():
                         choices=['pod', 'remote'],
                         help='Type of connection to kube-apiserver: pod or remote (default: %(default)s)'
                         )
+
+    parser.add_argument('-legacy-genesis',
+                        dest='legacy_genesis',
+                        default=False,
+                        action='store_true',
+                        help='Legacy genesis.json structure (for autonity < v0.2.0)'
+                        )
     args = parser.parse_args()
 
     if args.kubeconf_type == 'pod':
@@ -110,7 +120,18 @@ def main():
     genesis = get_genesis_template()
     validators = get_keys(path_validators)
     observers = get_keys(path_observers)
-    genesis = patch_genesis(genesis, validators, observers)
+
+    if args.legacy_genesis:
+        genesis = patch_genesis(genesis, validators, observers)
+        print('INFO: legacy genesis.json generated')
+    else:
+        operator_governance = get_keys(path_operator_governance)
+        operator_treasury = get_keys(path_operator_treasury)
+        print(operator_governance)
+        print(operator_treasury)
+        genesis = {'kind': 'new'}
+        print('INFO: NEW genesis.json generated')
+
 
     print(json.dumps(genesis, indent=2))
 
