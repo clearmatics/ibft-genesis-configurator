@@ -13,9 +13,6 @@ path_operator_governance = '/autonity/operator-governance'
 path_operator_treasury = '/autonity/operator-treasury'
 
 
-balance = '0x200000000000000000000000000000000000000000000000000000000000000'
-
-
 def get_genesis_template():
     with open(path_genesis_template) as f:
         genesis = json.load(f)
@@ -39,7 +36,7 @@ def get_keys(path):
     return {'addresses': addresses, 'pub_keys': pub_keys}
 
 
-def patch_genesis(genesis, validators, observers):
+def patch_genesis_legacy(genesis, validators, observers, balance):
     alloc        = {}
     validatorIps = environ.get('VALIDATOR_IPS')
     observerIps  = environ.get('OBSERVER_IPS')
@@ -109,6 +106,18 @@ def main():
                         action='store_true',
                         help='Legacy genesis.json structure (for autonity < v0.2.0)'
                         )
+    parser.add_argument('--stake',
+                        dest='stake',
+                        default=500000,
+                        type=int,
+                        help='Stake for each validator (default: %(default)s)'
+                        )
+    parser.add_argument('--balance',
+                        dest='balance',
+                        default='0x200000000000000000000000000000000000000000000000000000000000000',
+                        type=str,
+                        help='Balance for each treasury operator (default: %(default)s)'
+                        )
     args = parser.parse_args()
 
     if args.kubeconf_type == 'pod':
@@ -122,7 +131,7 @@ def main():
     observers = get_keys(path_observers)
 
     if args.legacy_genesis:
-        genesis = patch_genesis(genesis, validators, observers)
+        genesis = patch_genesis_legacy(genesis, validators, observers, args.balance)
         print('INFO: legacy genesis.json generated')
     else:
         operator_governance = get_keys(path_operator_governance)
@@ -130,6 +139,8 @@ def main():
         print(operator_governance)
         print(operator_treasury)
         genesis = {'kind': 'new'}
+        print('INFO: Stake for each validator: ' + str(args.stake))
+        print('INFO: Balance for each treasury operator: ' + args.balance)
         print('INFO: NEW genesis.json generated')
 
 
