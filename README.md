@@ -30,6 +30,14 @@ spec:
   containers:
   - name: init-job02-ibft-genesis-configurator
     image: clearmatics/ibft-genesis-configurator:latest
+    env:
+
+    - name: VALIDATOR_IPS
+      value: "{{ range $i, $e := until (atoi (printf "%d" (int64 .Values.validators.num))) }}{{index $validatorAddress $i }} {{ end }}" 
+
+    - name: OBSERVER_IPS
+      value: "{{ range $i, $e := until (atoi (printf "%d" (int64 .Values.observers.num))) }}{{index $observerAddress $i }} {{ end }}"
+
     volumeMounts:
       - name: validators
         mountPath: /autonity/validators
