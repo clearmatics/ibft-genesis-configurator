@@ -72,16 +72,22 @@ spec:
 cmd-options:
 ```shell script
 usage: genesis-configurator.py [-h] [-k {pod,remote}] [-legacy-genesis]
-                               [--stake STAKE] [--balance BALANCE]
+                               [--stake STAKE] [--mingasprice MINGASPRICE]
+                               [--gaslimit GASLIMIT] [--balance BALANCE]
 
 Generate genesis.json and write it to configmap
 
 optional arguments:
-  -h, --help         show this help message and exit
-  -k {pod,remote}    Type of connection to kube-apiserver: pod or remote
-                     (default: pod)
-  -legacy-genesis    Legacy genesis.json structure (for autonity < v0.2.0)
-  --stake STAKE      Stake for each validator (default: 500000)
-  --balance BALANCE  Balance for each treasury operator (default: 0x2000000000
-                     00000000000000000000000000000000000000000000000000000)
+  -h, --help            show this help message and exit
+  -k {pod,remote}       Type of connection to kube-apiserver: pod or remote
+                        (default: pod)
+  -legacy-genesis       Legacy genesis.json structure (for autonity < v0.2.0)
+  --stake STAKE         Stake for each validator (default: 500000)
+  --mingasprice MINGASPRICE
+                        Minimum Gas Price (default: 10000000000000)
+  --gaslimit GASLIMIT   Gas Limit (default: 0x5F5E100)
+  --balance BALANCE     Balance for each treasury operator (default: 0x2000000
+                        000000000000000000000000000000000000000000000000000000
+                        00)
+
 ```
