@@ -9,8 +9,8 @@ from os.path import isfile, join, isdir
 path_genesis_template = '/autonity/genesis-template.json'
 path_validators = '/autonity/validators'
 path_observers = '/autonity/observers'
-
-balance = '0x200000000000000000000000000000000000000000000000000000000000000'
+path_operator_governance = '/autonity/operator-governance'
+path_operator_treasury = '/autonity/operator-treasury'
 
 
 def get_genesis_template():
@@ -36,7 +36,7 @@ def get_keys(path):
     return {'addresses': addresses, 'pub_keys': pub_keys}
 
 
-def patch_genesis(genesis, validators, observers):
+def patch_genesis_legacy(genesis, validators, observers, balance):
     alloc        = {}
     validatorIps = environ.get('VALIDATOR_IPS')
     observerIps  = environ.get('OBSERVER_IPS')
@@ -84,6 +84,71 @@ def patch_genesis(genesis, validators, observers):
     return genesis
 
 
+def patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, balance, stake):
+    alloc = {}
+    validatorIps = environ.get('VALIDATOR_IPS')
+    observerIps = environ.get('OBSERVER_IPS')
+
+    for key, value in operator_governance['addresses'].items():
+        genesis['config']['autonityContract']['governanceOperator'] = value
+
+    for key, value in operator_treasury['addresses'].items():
+        alloc[value] = {'balance': balance}
+    genesis['alloc'] = alloc
+
+    users = []
+
+    if validatorIps:
+        validatorIpsArr = validatorIps.split(" ")
+        for key, value in validators['pub_keys'].items():
+            enode = 'enode://{pub_key}@{name}:{port}'.format(
+                pub_key=value,
+                name=validatorIpsArr[int(key)],
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "validator",
+                          "stake": stake
+                          })
+
+    else:
+        for key, value in validators['pub_keys'].items():
+            enode = 'enode://{pub_key}@validator-{name}:{port}'.format(
+                pub_key=value,
+                name=key,
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "validator",
+                          "stake": stake
+                          })
+
+    if observerIps:
+        observerIpsArr = observerIps.split(" ")
+        for key, value in observers['pub_keys'].items():
+            enode = 'enode://{pub_key}@{name}:{port}'.format(
+                pub_key=value,
+                name=observerIpsArr[int(key)],
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "participant"
+                          })
+    else:
+        for key, value in observers['pub_keys'].items():
+            enode = 'enode://{pub_key}@observer-{name}:{port}'.format(
+                pub_key=value,
+                name=key,
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "participant"
+                          })
+
+    genesis['config']['autonityContract']['users'] = users
+    return genesis
+
+
 def write_genesis(genesis, namespace):
     api_instance = client.CoreV1Api()
     cmap = client.V1ConfigMap()
@@ -99,6 +164,25 @@ def main():
                         choices=['pod', 'remote'],
                         help='Type of connection to kube-apiserver: pod or remote (default: %(default)s)'
                         )
+
+    parser.add_argument('-legacy-genesis',
+                        dest='legacy_genesis',
+                        default=False,
+                        action='store_true',
+                        help='Legacy genesis.json structure (for autonity < v0.2.0)'
+                        )
+    parser.add_argument('--stake',
+                        dest='stake',
+                        default=500000,
+                        type=int,
+                        help='Stake for each validator (default: %(default)s)'
+                        )
+    parser.add_argument('--balance',
+                        dest='balance',
+                        default='0x200000000000000000000000000000000000000000000000000000000000000',
+                        type=str,
+                        help='Balance for each treasury operator (default: %(default)s)'
+                        )
     args = parser.parse_args()
 
     if args.kubeconf_type == 'pod':
@@ -110,7 +194,20 @@ def main():
     genesis = get_genesis_template()
     validators = get_keys(path_validators)
     observers = get_keys(path_observers)
-    genesis = patch_genesis(genesis, validators, observers)
+
+    if args.legacy_genesis:
+        genesis = patch_genesis_legacy(genesis, validators, observers, args.balance)
+        print('INFO: legacy genesis.json generated')
+    else:
+        operator_governance = get_keys(path_operator_governance)
+        operator_treasury = get_keys(path_operator_treasury)
+        print(operator_governance)
+        print(operator_treasury)
+        genesis = patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, args.balance, args.stake)
+        print('INFO: Stake for each validator: ' + str(args.stake))
+        print('INFO: Balance for each treasury operator: ' + args.balance)
+        print('INFO: NEW genesis.json generated')
+
 
     print(json.dumps(genesis, indent=2))
 
