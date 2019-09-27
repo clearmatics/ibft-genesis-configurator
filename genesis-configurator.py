@@ -90,7 +90,7 @@ def patch_genesis(genesis, validators, observers, operator_governance, operator_
     observerIps = environ.get('OBSERVER_IPS')
 
     genesis['config']['autonityContract']['minGasPrice'] = mingasprice
-    genesis['config']['gasLimit'] = gaslimit
+    genesis['gasLimit'] = gaslimit
 
     for key, value in operator_governance['addresses'].items():
         genesis['config']['autonityContract']['governanceOperator'] = value
