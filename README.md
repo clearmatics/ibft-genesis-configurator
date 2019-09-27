@@ -16,6 +16,13 @@ It will:
 * `/autonity/operator-governance` - should contain ConfigMap as a file with operator-governance public data
 * `/autonity/operator-treasury` - should contain ConfigMap as a file with operator-treasury public data
 
+
+Set ips as env vars
+```shell script
+    validatorIps = environ.get('VALIDATOR_IPS')
+    observerIps = environ.get('OBSERVER_IPS')
+```
+
 Example of `pod.spec` for using it in kubernetes:
 ```yaml
 spec:
@@ -53,4 +60,20 @@ spec:
         items:
           - key: genesis.json
             path: genesis-template.json
+```
+cmd-options:
+```shell script
+usage: genesis-configurator.py [-h] [-k {pod,remote}] [-legacy-genesis]
+                               [--stake STAKE] [--balance BALANCE]
+
+Generate genesis.json and write it to configmap
+
+optional arguments:
+  -h, --help         show this help message and exit
+  -k {pod,remote}    Type of connection to kube-apiserver: pod or remote
+                     (default: pod)
+  -legacy-genesis    Legacy genesis.json structure (for autonity < v0.2.0)
+  --stake STAKE      Stake for each validator (default: 500000)
+  --balance BALANCE  Balance for each treasury operator (default: 0x2000000000
+                     00000000000000000000000000000000000000000000000000000)
 ```

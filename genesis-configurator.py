@@ -84,6 +84,71 @@ def patch_genesis_legacy(genesis, validators, observers, balance):
     return genesis
 
 
+def patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, balance, stake):
+    alloc = {}
+    validatorIps = environ.get('VALIDATOR_IPS')
+    observerIps = environ.get('OBSERVER_IPS')
+
+    for key, value in operator_governance['addresses'].items():
+        genesis['config']['autonityContract']['governanceOperator'] = value
+
+    for key, value in operator_treasury['addresses'].items():
+        alloc[value] = {'balance': balance}
+    genesis['alloc'] = alloc
+
+    users = []
+
+    if validatorIps:
+        validatorIpsArr = validatorIps.split(" ")
+        for key, value in validators['pub_keys'].items():
+            enode = 'enode://{pub_key}@{name}:{port}'.format(
+                pub_key=value,
+                name=validatorIpsArr[int(key)],
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "validator",
+                          "stake": stake
+                          })
+
+    else:
+        for key, value in validators['pub_keys'].items():
+            enode = 'enode://{pub_key}@validator-{name}:{port}'.format(
+                pub_key=value,
+                name=key,
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "validator",
+                          "stake": stake
+                          })
+
+    if observerIps:
+        observerIpsArr = observerIps.split(" ")
+        for key, value in observers['pub_keys'].items():
+            enode = 'enode://{pub_key}@{name}:{port}'.format(
+                pub_key=value,
+                name=observerIpsArr[int(key)],
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "participant"
+                          })
+    else:
+        for key, value in observers['pub_keys'].items():
+            enode = 'enode://{pub_key}@observer-{name}:{port}'.format(
+                pub_key=value,
+                name=key,
+                port=30303
+            )
+            users.append({"enode": enode,
+                          "type" : "participant"
+                          })
+
+    genesis['config']['autonityContract']['users'] = users
+    return genesis
+
+
 def write_genesis(genesis, namespace):
     api_instance = client.CoreV1Api()
     cmap = client.V1ConfigMap()
@@ -138,7 +203,7 @@ def main():
         operator_treasury = get_keys(path_operator_treasury)
         print(operator_governance)
         print(operator_treasury)
-        genesis = {'kind': 'new'}
+        genesis = patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, args.balance, args.stake)
         print('INFO: Stake for each validator: ' + str(args.stake))
         print('INFO: Balance for each treasury operator: ' + args.balance)
         print('INFO: NEW genesis.json generated')
