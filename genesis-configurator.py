@@ -84,10 +84,13 @@ def patch_genesis_legacy(genesis, validators, observers, balance):
     return genesis
 
 
-def patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, balance, stake):
+def patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, balance, stake, mingasprice, gaslimit):
     alloc = {}
     validatorIps = environ.get('VALIDATOR_IPS')
     observerIps = environ.get('OBSERVER_IPS')
+
+    genesis['config']['autonityContract']['minGasPrice'] = mingasprice
+    genesis['config']['gasLimit'] = gaslimit
 
     for key, value in operator_governance['addresses'].items():
         genesis['config']['autonityContract']['governanceOperator'] = value
@@ -177,6 +180,18 @@ def main():
                         type=int,
                         help='Stake for each validator (default: %(default)s)'
                         )
+    parser.add_argument('--mingasprice',
+                        dest='mingasprice',
+                        default=10000000000000,
+                        type=int,
+                        help='Minimum Gas Price (default: %(default)s)'
+                        )
+    parser.add_argument('--gaslimit',
+                        dest='gaslimit',
+                        default="0x5F5E100",
+                        type=str,
+                        help='Gas Limit (default: %(default)s)'
+                        )
     parser.add_argument('--balance',
                         dest='balance',
                         default='0x200000000000000000000000000000000000000000000000000000000000000',
@@ -196,14 +211,14 @@ def main():
     observers = get_keys(path_observers)
 
     if args.legacy_genesis:
-        genesis = patch_genesis_legacy(genesis, validators, observers, args.balance)
+        genesis = patch_genesis_legacy(genesis, validators, observers, args.balance,)
         print('INFO: legacy genesis.json generated')
     else:
         operator_governance = get_keys(path_operator_governance)
         operator_treasury = get_keys(path_operator_treasury)
         print(operator_governance)
         print(operator_treasury)
-        genesis = patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, args.balance, args.stake)
+        genesis = patch_genesis(genesis, validators, observers, operator_governance, operator_treasury, args.balance, args.stake, args.mingasprice, args.gaslimit)
         print('INFO: Stake for each validator: ' + str(args.stake))
         print('INFO: Balance for each treasury operator: ' + args.balance)
         print('INFO: NEW genesis.json generated')
