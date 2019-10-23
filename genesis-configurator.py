@@ -93,7 +93,7 @@ def patch_genesis(genesis, validators, observers, operator_governance, operator_
     genesis['gasLimit'] = gaslimit
 
     for key, value in operator_governance['addresses'].items():
-        genesis['config']['autonityContract']['governanceOperator'] = value
+        genesis['config']['autonityContract']['operator'] = value
 
     for key, value in operator_treasury['addresses'].items():
         alloc[value] = {'balance': balance}
