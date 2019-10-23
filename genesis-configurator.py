@@ -2,6 +2,7 @@
 
 import json
 import argparse
+import time
 from kubernetes import client, config
 from os import listdir, environ
 from os.path import isfile, join, isdir
@@ -20,6 +21,8 @@ def get_genesis_template():
 
 
 def get_keys(path):
+    while len(listdir(path)) < 2:
+        time.sleep(1)
     list_vars = [f for f in listdir(path) if isfile(join(path, f))]
     addresses = {}
     pub_keys = {}
